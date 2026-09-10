@@ -17,6 +17,7 @@ import {
   type AgentSession,
   type ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
+import { processPiEvent } from "./runner-events.js";
 import { buildForkTaskPrompt } from "./runSubprocess.ts";
 import {
   type ForkDetails,
@@ -147,14 +148,11 @@ export async function runInProcess(opts: RunInProcessOptions): Promise<ForkResul
     };
 
     unsubscribe = session.subscribe((event: any) => {
-      if (event.type === "turn_end") {
+      if (event.type === "turn_start") {
         result.usage.turns++;
-        if (event.message?.usage) {
-          result.usage.input += event.message.usage.input ?? 0;
-          result.usage.output += event.message.usage.output ?? 0;
-          result.usage.cacheRead += event.message.usage.cacheRead ?? 0;
-          result.usage.cacheWrite += event.message.usage.cacheWrite ?? 0;
-        }
+      }
+      const changed = processPiEvent(event, result);
+      if (changed || event.type === "turn_start" || event.type === "turn_end") {
         emitUpdate();
       }
     });
