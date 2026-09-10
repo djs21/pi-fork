@@ -121,8 +121,10 @@ export async function runInProcess(opts: RunInProcessOptions): Promise<ForkResul
       authStorage: modelRegistry.authStorage,
       modelRegistry,
       modelRuntime,
-      model: effort?.profile?.id,
-      thinkingLevel: effort?.profile?.thinking,
+      model: effort?.profile?.id && effort?.profile?.provider
+        ? modelRegistry.find(effort.profile.provider, effort.profile.id)
+        : undefined,
+      thinkingLevel: effort?.profile?.thinking as any,
     });
 
     session = sessionResult.session;
