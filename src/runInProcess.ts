@@ -96,10 +96,11 @@ export async function runInProcess(opts: RunInProcessOptions): Promise<ForkResul
     const settingsManager = SettingsManager.inMemory();
 
     // 3. Setup extension loader
+    const resolvedAgentDir = agentDir || path.join(os.homedir(), ".pi", "agent");
     const resourceLoader = new DefaultResourceLoader({
       cwd,
-      agentDir,
-      additionalExtensionPaths: extensions ?? [],
+      agentDir: resolvedAgentDir,
+      additionalExtensionPaths: extensions && extensions.length > 0 ? extensions : undefined,
     });
 
     // 4. Create agent session

@@ -9,6 +9,8 @@
  * and the requested task. It does not modify the system prompt.
  */
 
+import * as os from "node:os";
+import * as path from "node:path";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
 import { aggregateInclusiveCost, formatForkCostStatus } from "./cost.js";
@@ -191,7 +193,7 @@ export default function (pi: ExtensionAPI) {
 
       const result = await runFork({
         cwd: ctx.cwd,
-        agentDir: ctx.agentDir,
+        agentDir: (ctx as any).agentDir || path.join(os.homedir(), ".pi", "agent"),
         task: params.task,
         forkSessionSnapshotJsonl: snapshot,
         config,
