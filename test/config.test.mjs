@@ -82,6 +82,7 @@ test("loadConfig reads pi-fork.extensions and resolves local paths relative to s
       costFooter: true,
       offline: true,
       environment: {},
+      runtime: "auto",
     });
   } finally {
     if (previous === undefined) delete process.env.PI_FORK_TEST_AGENT_DIR;
@@ -127,6 +128,7 @@ test("loadConfig treats null extensions as normal Pi extension loading", async (
       costFooter: true,
       offline: true,
       environment: {},
+      runtime: "auto",
     });
   } finally {
     if (previous === undefined) delete process.env.PI_FORK_TEST_AGENT_DIR;
@@ -162,6 +164,7 @@ test("loadConfig preserves empty extensions array as no child extensions", async
       costFooter: true,
       offline: true,
       environment: {},
+      runtime: "auto",
     });
   } finally {
     if (previous === undefined) delete process.env.PI_FORK_TEST_AGENT_DIR;
@@ -199,6 +202,7 @@ test("loadConfig allows disabling cost footer", async () => {
       costFooter: false,
       offline: true,
       environment: {},
+      runtime: "auto",
     });
   } finally {
     if (previous === undefined) delete process.env.PI_FORK_TEST_AGENT_DIR;
@@ -326,6 +330,7 @@ test("loadConfig merges pi-fork.environment with project overriding global", asy
         GLOBAL_ONLY: "yes",
         PROJECT_ONLY: "yes",
       },
+      runtime: "auto",
     });
   } finally {
     if (previous === undefined) delete process.env.PI_FORK_TEST_AGENT_DIR;
@@ -469,6 +474,8 @@ test("loadConfig parses defaultEffort and complete effortProfiles", async () => 
       costFooter: true,
       offline: true,
       environment: {},
+      runtime: "auto",
+      runtime: "auto",
       defaultEffort: "balanced",
       effortProfiles: {
         fast: { provider: "openai-codex", id: "gpt-fast", thinking: "minimal" },
@@ -594,6 +601,8 @@ test("loadConfig keeps no-profile config backward compatible", async () => {
       costFooter: true,
       offline: true,
       environment: {},
+      runtime: "auto",
+      runtime: "auto",
     });
   } finally {
     if (previous === undefined) delete process.env.PI_FORK_TEST_AGENT_DIR;

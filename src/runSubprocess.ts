@@ -1,9 +1,5 @@
 /**
- * Fork process runner.
- *
- * ponytail: subprocess fallback — keep for environment/offline isolation cases.
- * The main runtime path now uses runInProcess.ts for better performance.
- * Upgrade path: remove if environment/offline config is never needed.
+ * Subprocess fork runner.
  *
  * Spawns an isolated `pi` process, gives it a temporary session snapshot, and
  * streams JSON-mode results back to the parent tool call.
@@ -223,7 +219,7 @@ export function buildPiArgs(
   return args;
 }
 
-export interface RunForkOptions {
+export interface RunSubprocessOptions {
   cwd: string;
   task: string;
   forkSessionSnapshotJsonl: string;
@@ -237,7 +233,7 @@ export interface RunForkOptions {
   resolveContextWindow?: ContextWindowResolver;
 }
 
-export async function runFork(opts: RunForkOptions): Promise<ForkResult> {
+export async function runSubprocess(opts: RunSubprocessOptions): Promise<ForkResult> {
   const {
     cwd,
     task,
@@ -416,8 +412,6 @@ export async function runFork(opts: RunForkOptions): Promise<ForkResult> {
         if (!result.sawAgentEnd) return;
 
         if (result.willRetry === true) {
-          // Child Pi declared it will auto-retry; wait for retry events
-          // (or process exit) instead of finishing and killing the child.
           clearSemanticCompletionTimer();
           clearRetryDecisionTimer();
           return;
@@ -426,8 +420,6 @@ export async function runFork(opts: RunForkOptions): Promise<ForkResult> {
         if (isErrorAgentEnd()) {
           clearSemanticCompletionTimer();
           if (result.willRetry === false) {
-            // Child Pi declared no retry will happen; finish promptly
-            // instead of waiting the retry-decision window.
             clearRetryDecisionTimer();
             scheduleSemanticCompletion(AGENT_END_GRACE_MS);
             return;

@@ -7,6 +7,8 @@ import type { ForkEffort, ForkEffortProfile, ForkThinkingLevel } from "./types.j
 export const EFFORT_LEVELS = ["fast", "balanced", "deep"] as const;
 export const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh"] as const;
 
+export type ForkRuntime = "auto" | "in-process" | "subprocess";
+
 export interface ForkConfig {
   /**
    * Extensions to load in child fork processes.
@@ -25,6 +27,18 @@ export interface ForkConfig {
   /** Show fork cost as an extra footer status line. */
   costFooter: boolean;
 
+  /** Runtime mode for fork execution. */
+  runtime: ForkRuntime;
+
+  /** Exact tool names allowed in fork children. null = Pi defaults. */
+  tools?: string[] | null;
+
+  /** Tool names to remove from fork children after extension loading. */
+  deniedTools?: string[];
+
+  /** Whether fork children can spawn their own forks. */
+  allowRecursiveFork?: boolean;
+
   /** Effort to use when a fork call omits the effort parameter. */
   defaultEffort?: ForkEffort;
 
@@ -39,6 +53,7 @@ export const DEFAULT_CONFIG: ForkConfig = {
   environment: {},
   offline: true,
   costFooter: true,
+  runtime: "auto",
 };
 
 function isPackageSource(value: string): boolean {
@@ -195,6 +210,20 @@ function readNamespacedConfig(settingsPath: string, baseDir: string): Partial<Fo
     if (typeof config.costFooter === "boolean") parsed.costFooter = config.costFooter;
     if (defaultEffort !== undefined) parsed.defaultEffort = defaultEffort;
     if (effortProfiles !== undefined) parsed.effortProfiles = effortProfiles;
+    if (typeof config.runtime === "string" && ["auto", "in-process", "subprocess"].includes(config.runtime)) {
+      parsed.runtime = config.runtime as ForkRuntime;
+    }
+    if (Array.isArray(config.tools) && config.tools.every((t: unknown) => typeof t === "string")) {
+      parsed.tools = config.tools as string[];
+    } else if (config.tools === null) {
+      parsed.tools = null;
+    }
+    if (Array.isArray(config.deniedTools) && config.deniedTools.every((t: unknown) => typeof t === "string")) {
+      parsed.deniedTools = config.deniedTools as string[];
+    }
+    if (typeof config.allowRecursiveFork === "boolean") {
+      parsed.allowRecursiveFork = config.allowRecursiveFork;
+    }
     return parsed;
   } catch {
     return {};

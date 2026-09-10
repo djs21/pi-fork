@@ -265,6 +265,45 @@ forks. Disable the extra footer line with:
 }
 ```
 
+## Runtime
+
+pi-fork supports two runtime modes for executing forks:
+
+### In-Process (Default)
+
+Runs the fork directly in the same process using Pi's AgentSession API. This is:
+
+- **Fast**: ~0.1s startup vs ~2-5s for subprocess
+- **Lightweight**: ~3MB memory vs ~120MB per fork
+- **Simple**: No process spawning, no JSON parsing, no CLI arg translation
+
+### Subprocess
+
+Spawns a separate `pi` process for each fork. This is:
+
+- **Isolated**: Extension crashes don't affect the main process
+- **Flexible**: Supports custom environment variables and offline mode
+- **Heavier**: Full process overhead for each fork
+
+### Configuration
+
+Set the runtime mode in `~/.pi/agent/settings.json` or `.pi/settings.json`:
+
+```json
+{
+  "pi-fork": {
+    "runtime": "auto"
+  }
+}
+```
+
+- `"auto"` (default): Uses in-process unless `environment` config is non-empty
+- `"in-process"`: Always use in-process runner
+- `"subprocess"`: Always use subprocess runner
+
+**Note**: The `environment` and `offline` settings only work with the subprocess runtime.
+If you need custom environment variables, set `runtime: "subprocess"`.
+
 ## Manual Check
 
 From this directory:

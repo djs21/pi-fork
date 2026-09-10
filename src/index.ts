@@ -14,7 +14,7 @@ import { Type } from "@sinclair/typebox";
 import { aggregateInclusiveCost, formatForkCostStatus } from "./cost.js";
 import { EFFORT_LEVELS, loadConfig, type ForkConfig } from "./config.js";
 import { renderForkCall, renderForkResult } from "./render.js";
-import { runFork } from "./runner.js";
+import { runFork } from "./runFork.js";
 import { getResultSummaryText } from "./runner-events.js";
 import {
   type ForkDetails,
@@ -191,15 +191,16 @@ export default function (pi: ExtensionAPI) {
 
       const result = await runFork({
         cwd: ctx.cwd,
+        agentDir: ctx.agentDir,
         task: params.task,
         forkSessionSnapshotJsonl: snapshot,
-        extensions: config.extensions,
-        environment: config.environment,
-        offline: config.offline,
+        config,
         signal,
         onUpdate,
         makeDetails,
         effort,
+        modelRegistry: ctx.modelRegistry,
+        modelRuntime: ctx.modelRuntime,
         resolveContextWindow: (provider, model) => resolveModelContextWindow(ctx.modelRegistry, provider, model),
       });
 
