@@ -46,6 +46,35 @@ interface SessionSnapshotSource {
   getBranch: () => unknown[];
 }
 
+function sanitizeSnapshotEntry(entry: unknown): unknown {
+  if (!entry || typeof entry !== "object") return entry;
+  const raw = entry as Record<string, unknown>;
+  if (raw.type === "message" && raw.message && typeof raw.message === "object") {
+    const msg = raw.message as Record<string, unknown>;
+    if (msg.role === "toolResult" && msg.toolName === "fork" && msg.details && typeof msg.details === "object") {
+      const details = msg.details as Record<string, unknown>;
+      if (Array.isArray(details.results)) {
+        return {
+          ...raw,
+          message: {
+            ...msg,
+            details: {
+              ...details,
+              results: details.results.map((r: unknown) => {
+                if (r && typeof r === "object") {
+                  return { ...(r as Record<string, unknown>), messages: [] };
+                }
+                return r;
+              }),
+            },
+          },
+        };
+      }
+    }
+  }
+  return entry;
+}
+
 function buildForkSessionSnapshotJsonl(
   sessionManager: SessionSnapshotSource,
 ): string | null {
@@ -54,7 +83,9 @@ function buildForkSessionSnapshotJsonl(
 
   const branchEntries = sessionManager.getBranch();
   const lines = [JSON.stringify(header)];
-  for (const entry of branchEntries) lines.push(JSON.stringify(entry));
+  for (const entry of branchEntries) {
+    lines.push(JSON.stringify(sanitizeSnapshotEntry(entry)));
+  }
   return `${lines.join("\n")}\n`;
 }
 

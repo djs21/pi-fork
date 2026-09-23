@@ -171,14 +171,10 @@ export async function runInProcess(opts: RunInProcessOptions): Promise<ForkResul
     const prompt = buildForkTaskPrompt(task);
     await session.prompt(prompt);
 
-    // 9. Extract result from session messages
-    const messages = session.messages ?? [];
-    result.messages = messages;
-
-    // Get the last assistant message as output
-    const lastAssistant = messages
-      .filter((m: any) => m.role === "assistant")
-      .pop();
+    // 9. Finalize result status from generated assistant messages
+    // Note: result.messages already contains the sanitized assistant messages
+    // emitted during this fork session via processPiEvent (without inheriting parent history).
+    const lastAssistant = result.messages[result.messages.length - 1];
     const outputText = lastAssistant?.content
       ?.filter((c: any) => c.type === "text")
       .map((c: any) => c.text)
