@@ -35,6 +35,9 @@ export interface RunInProcessOptions {
   task: string;
   forkSessionSnapshotJsonl: string;
   extensions?: string[] | null;
+  tools?: string[] | null;
+  deniedTools?: string[];
+  allowRecursiveFork?: boolean;
   signal?: AbortSignal;
   onUpdate?: OnUpdateCallback;
   makeDetails: (results: ForkResult[]) => ForkDetails;
@@ -59,6 +62,9 @@ export async function runInProcess(opts: RunInProcessOptions): Promise<ForkResul
     task,
     forkSessionSnapshotJsonl,
     extensions,
+    tools,
+    deniedTools,
+    allowRecursiveFork = false,
     signal,
     onUpdate,
     makeDetails,
@@ -101,8 +107,10 @@ export async function runInProcess(opts: RunInProcessOptions): Promise<ForkResul
     const resourceLoader = new DefaultResourceLoader({
       cwd,
       agentDir: resolvedAgentDir,
-      additionalExtensionPaths: extensions && extensions.length > 0 ? extensions : undefined,
+      additionalExtensionPaths: Array.isArray(extensions) && extensions.length > 0 ? extensions : undefined,
+      noExtensions: Array.isArray(extensions),
     });
+    await resourceLoader.reload();
 
     // 4. Create agent session
     const result: ForkResult = {
@@ -133,6 +141,15 @@ export async function runInProcess(opts: RunInProcessOptions): Promise<ForkResul
 
     // 5. Trigger extension registration
     await session.extensionRunner.emit({ type: "session_start" });
+
+    // Apply tool policy (inherit tools/extensions, but deny fork by default)
+    let activeTools = tools !== undefined && tools !== null ? [...tools] : session.getActiveToolNames();
+    const denied = new Set(deniedTools ?? []);
+    if (!allowRecursiveFork) {
+      denied.add("fork");
+    }
+    activeTools = activeTools.filter((name) => !denied.has(name));
+    session.setActiveToolsByName(activeTools);
 
     // 6. Subscribe to events for usage tracking
     const emitUpdate = () => {
