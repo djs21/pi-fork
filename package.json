@@ -37,6 +37,15 @@
     },
     "@earendil-works/pi-ai": {
       "optional": true
+    },
+    "@earendil-works/pi-coding-agent": {
+      "optional": true
+    },
+    "@earendil-works/pi-tui": {
+      "optional": true
+    },
+    "@sinclair/typebox": {
+      "optional": true
     }
   }
 }
