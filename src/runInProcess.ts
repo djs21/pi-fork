@@ -16,6 +16,9 @@ import {
   SettingsManager,
   type AgentSession,
   type ExtensionContext,
+  createCodemodeExtension,
+  createMcpExtension,
+  createToolSearchExtension,
 } from "@earendil-works/pi-coding-agent";
 import { processPiEvent } from "./runner-events.js";
 import { buildForkTaskPrompt } from "./runSubprocess.ts";
@@ -44,6 +47,7 @@ export interface RunInProcessOptions {
   effort?: ForkEffortState;
   modelRegistry: ExtensionContext["modelRegistry"];
   modelRuntime: ExtensionContext["modelRuntime"];
+  parentActiveTools?: string[];
 }
 
 function cleanupTempDir(dir: string | null): void {
@@ -71,6 +75,7 @@ export async function runInProcess(opts: RunInProcessOptions): Promise<ForkResul
     effort,
     modelRegistry,
     modelRuntime,
+    parentActiveTools,
   } = opts;
 
   if (!forkSessionSnapshotJsonl.trim()) {
@@ -109,6 +114,11 @@ export async function runInProcess(opts: RunInProcessOptions): Promise<ForkResul
       agentDir: resolvedAgentDir,
       additionalExtensionPaths: Array.isArray(extensions) && extensions.length > 0 ? extensions : undefined,
       noExtensions: Array.isArray(extensions),
+      extensionFactories: [
+        { name: "codemode", factory: createCodemodeExtension(), builtin: true },
+        { name: "mcp", factory: createMcpExtension(), builtin: true },
+        { name: "tool-search", factory: createToolSearchExtension(), builtin: true },
+      ],
     });
     await resourceLoader.reload();
 
@@ -143,7 +153,12 @@ export async function runInProcess(opts: RunInProcessOptions): Promise<ForkResul
     await session.extensionRunner.emit({ type: "session_start" });
 
     // Apply tool policy (inherit tools/extensions, but deny fork by default)
-    let activeTools = tools !== undefined && tools !== null ? [...tools] : session.getActiveToolNames();
+    let activeTools =
+      tools !== undefined && tools !== null
+        ? [...tools]
+        : parentActiveTools !== undefined && parentActiveTools.length > 0
+          ? [...parentActiveTools]
+          : session.getActiveToolNames();
     const denied = new Set(deniedTools ?? []);
     if (!allowRecursiveFork) {
       denied.add("fork");

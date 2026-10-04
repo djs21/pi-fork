@@ -31,6 +31,7 @@ export interface RunForkOptions {
   modelRegistry: ExtensionContext["modelRegistry"];
   modelRuntime: ExtensionContext["modelRuntime"];
   resolveContextWindow?: ContextWindowResolver;
+  parentActiveTools?: string[];
 }
 
 function shouldUseSubprocess(config: ForkConfig): boolean {
@@ -59,6 +60,7 @@ export async function runFork(opts: RunForkOptions): Promise<ForkResult> {
     modelRegistry,
     modelRuntime,
     resolveContextWindow,
+    parentActiveTools,
   } = opts;
 
   const useSubprocess = shouldUseSubprocess(config);
@@ -77,6 +79,10 @@ export async function runFork(opts: RunForkOptions): Promise<ForkResult> {
       makeDetails,
       effort,
       resolveContextWindow,
+      tools: config.tools,
+      deniedTools: config.deniedTools,
+      allowRecursiveFork: config.allowRecursiveFork,
+      parentActiveTools,
     });
   }
 
@@ -96,5 +102,6 @@ export async function runFork(opts: RunForkOptions): Promise<ForkResult> {
     effort,
     modelRegistry,
     modelRuntime,
+    parentActiveTools,
   });
 }

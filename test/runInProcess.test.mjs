@@ -76,3 +76,42 @@ test("in-process session honors explicit tools and deniedTools", async () => {
 
   assert.deepEqual(session.getActiveToolNames(), ["read"]);
 });
+
+test("in-process session registers codemode and activates it when parentActiveTools contains codemode", async () => {
+  const cwd = process.cwd();
+  const agentDir = path.join(os.homedir(), ".pi", "agent");
+
+  const resourceLoader = new pi.DefaultResourceLoader({
+    cwd,
+    agentDir,
+    extensionFactories: [
+      { name: "codemode", factory: pi.createCodemodeExtension(), builtin: true },
+      { name: "mcp", factory: pi.createMcpExtension(), builtin: true },
+      { name: "tool-search", factory: pi.createToolSearchExtension(), builtin: true },
+    ],
+  });
+  await resourceLoader.reload();
+
+  const { session } = await pi.createAgentSession({
+    cwd,
+    agentDir,
+    resourceLoader,
+    sessionManager: pi.SessionManager.inMemory(),
+    settingsManager: pi.SettingsManager.inMemory(),
+    modelRegistry: new pi.ModelRegistry(),
+  });
+
+  await session.extensionRunner.emit({ type: "session_start" });
+
+  const parentActiveTools = ["read", "bash", "codemode", "fork"];
+  const denied = new Set();
+  denied.add("fork");
+
+  let activeTools = parentActiveTools.filter((t) => !denied.has(t));
+  session.setActiveToolsByName(activeTools);
+
+  const finalTools = session.getActiveToolNames();
+  assert.equal(finalTools.includes("codemode"), true, "codemode must be active when inherited from parent");
+  assert.equal(finalTools.includes("fork"), false, "fork must be stripped");
+  assert.equal(finalTools.includes("read"), true, "read must remain active");
+});

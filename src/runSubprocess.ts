@@ -175,6 +175,7 @@ export function buildPiArgs(
   extensions: string[] | null,
   effortProfile?: ForkEffortProfile,
   inherited = inheritedCliArgs,
+  activeTools?: string[],
 ): string[] {
   const args: string[] = [
     "--mode",
@@ -203,7 +204,13 @@ export function buildPiArgs(
     args.push("--thinking", effortProfile.thinking);
   }
 
-  if (inherited.fallbackTools !== undefined) {
+  if (activeTools !== undefined) {
+    if (activeTools.length === 0) {
+      args.push("--no-tools");
+    } else {
+      args.push("--tools", activeTools.join(","));
+    }
+  } else if (inherited.fallbackTools !== undefined) {
     args.push("--tools", inherited.fallbackTools);
   } else if (inherited.fallbackNoTools) {
     args.push("--no-tools");
@@ -224,6 +231,9 @@ export interface RunSubprocessOptions {
   task: string;
   forkSessionSnapshotJsonl: string;
   extensions?: string[] | null;
+  tools?: string[] | null;
+  deniedTools?: string[];
+  allowRecursiveFork?: boolean;
   environment?: Record<string, string>;
   offline?: boolean;
   signal?: AbortSignal;
@@ -231,6 +241,7 @@ export interface RunSubprocessOptions {
   makeDetails: (results: ForkResult[]) => ForkDetails;
   effort?: ForkEffortState;
   resolveContextWindow?: ContextWindowResolver;
+  parentActiveTools?: string[];
 }
 
 export async function runSubprocess(opts: RunSubprocessOptions): Promise<ForkResult> {
@@ -239,6 +250,9 @@ export async function runSubprocess(opts: RunSubprocessOptions): Promise<ForkRes
     task,
     forkSessionSnapshotJsonl,
     extensions = null,
+    tools,
+    deniedTools,
+    allowRecursiveFork = false,
     environment = {},
     offline = true,
     signal,
@@ -246,6 +260,7 @@ export async function runSubprocess(opts: RunSubprocessOptions): Promise<ForkRes
     makeDetails,
     effort,
     resolveContextWindow,
+    parentActiveTools,
   } = opts;
 
   if (!forkSessionSnapshotJsonl.trim()) {
@@ -299,7 +314,22 @@ export async function runSubprocess(opts: RunSubprocessOptions): Promise<ForkRes
   forkSessionTmpPath = tmp.filePath;
 
   try {
-    const piArgs = buildPiArgs(task, forkSessionTmpPath, extensions, effort?.profile);
+    let activeTools: string[] | undefined = undefined;
+    if (tools !== undefined && tools !== null) {
+      activeTools = [...tools];
+    } else if (parentActiveTools !== undefined && parentActiveTools.length > 0) {
+      activeTools = [...parentActiveTools];
+    }
+
+    const denied = new Set(deniedTools ?? []);
+    if (!allowRecursiveFork) {
+      denied.add("fork");
+    }
+    if (activeTools !== undefined) {
+      activeTools = activeTools.filter((name) => !denied.has(name));
+    }
+
+    const piArgs = buildPiArgs(task, forkSessionTmpPath, extensions, effort?.profile, inheritedCliArgs, activeTools);
     let wasAborted = false;
 
     const exitCode = await new Promise<number>((resolve) => {

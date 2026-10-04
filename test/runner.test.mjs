@@ -709,3 +709,40 @@ test("runFork preserves unresolved effort warning metadata without changing chil
   assert.equal(result.errorMessage, undefined);
   assert.equal(isResultSuccess(result), true);
 });
+
+test("buildPiArgs forwards inherited active tools via --tools flag", () => {
+  const args = buildPiArgs(
+    "Run task",
+    "/tmp/fork.jsonl",
+    null,
+    undefined,
+    {
+      alwaysProxy: [],
+      extensionArgs: [],
+      fallbackNoTools: false,
+    },
+    ["read", "bash", "codemode"],
+  );
+
+  assert.equal(args.includes("--tools"), true);
+  const toolsIdx = args.indexOf("--tools");
+  assert.equal(args[toolsIdx + 1], "read,bash,codemode");
+});
+
+test("buildPiArgs forwards --no-tools when activeTools is empty", () => {
+  const args = buildPiArgs(
+    "Run task",
+    "/tmp/fork.jsonl",
+    null,
+    undefined,
+    {
+      alwaysProxy: [],
+      extensionArgs: [],
+      fallbackNoTools: false,
+    },
+    [],
+  );
+
+  assert.equal(args.includes("--no-tools"), true);
+  assert.equal(args.includes("--tools"), false);
+});

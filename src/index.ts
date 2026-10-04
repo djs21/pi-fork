@@ -222,6 +222,8 @@ export default function (pi: ExtensionAPI) {
         };
       }
 
+      const parentActiveTools = typeof pi.getActiveTools === "function" ? pi.getActiveTools() : undefined;
+
       const result = await runFork({
         cwd: ctx.cwd,
         agentDir: (ctx as any).agentDir || path.join(os.homedir(), ".pi", "agent"),
@@ -235,6 +237,7 @@ export default function (pi: ExtensionAPI) {
         modelRegistry: ctx.modelRegistry,
         modelRuntime: ctx.modelRuntime,
         resolveContextWindow: (provider, model) => resolveModelContextWindow(ctx.modelRegistry, provider, model),
+        parentActiveTools,
       });
 
       if (isResultError(result)) {
