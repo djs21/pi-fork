@@ -16,9 +16,6 @@ import {
   SettingsManager,
   type AgentSession,
   type ExtensionContext,
-  createCodemodeExtension,
-  createMcpExtension,
-  createToolSearchExtension,
 } from "@earendil-works/pi-coding-agent";
 import { processPiEvent } from "./runner-events.js";
 import { buildForkTaskPrompt } from "./runSubprocess.ts";
@@ -114,11 +111,6 @@ export async function runInProcess(opts: RunInProcessOptions): Promise<ForkResul
       agentDir: resolvedAgentDir,
       additionalExtensionPaths: Array.isArray(extensions) && extensions.length > 0 ? extensions : undefined,
       noExtensions: Array.isArray(extensions),
-      extensionFactories: [
-        { name: "codemode", factory: createCodemodeExtension(), builtin: true },
-        { name: "mcp", factory: createMcpExtension(), builtin: true },
-        { name: "tool-search", factory: createToolSearchExtension(), builtin: true },
-      ],
     });
     await resourceLoader.reload();
 
