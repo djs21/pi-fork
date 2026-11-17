@@ -9,6 +9,16 @@ export const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhig
 
 export type ForkRuntime = "auto" | "in-process" | "subprocess";
 
+/**
+ * System prompt source for child forks.
+ *
+ * - "stock": Pi's built-in coding-assistant prompt. The parent's SYSTEM.md is NOT
+ *   inherited, so a fork never believes it is an orchestrator that should fork again.
+ * - "inherit": keep whatever the parent uses (pair with allowRecursiveFork).
+ * - any other string: path or literal text handed to the child as its prompt.
+ */
+export type ForkChildPrompt = "stock" | "inherit" | (string & {});
+
 export interface ForkConfig {
   /**
    * Extensions to load in child fork processes.
@@ -39,6 +49,9 @@ export interface ForkConfig {
   /** Whether fork children can spawn their own forks. */
   allowRecursiveFork?: boolean;
 
+  /** System prompt source for child forks. See ForkChildPrompt. */
+  childPrompt?: ForkChildPrompt;
+
   /** Effort to use when a fork call omits the effort parameter. */
   defaultEffort?: ForkEffort;
 
@@ -54,6 +67,7 @@ export const DEFAULT_CONFIG: ForkConfig = {
   offline: true,
   costFooter: true,
   runtime: "auto",
+  childPrompt: "stock",
 };
 
 function isPackageSource(value: string): boolean {
@@ -224,10 +238,38 @@ function readNamespacedConfig(settingsPath: string, baseDir: string): Partial<Fo
     if (typeof config.allowRecursiveFork === "boolean") {
       parsed.allowRecursiveFork = config.allowRecursiveFork;
     }
+    if (typeof config.childPrompt === "string" && config.childPrompt.trim()) {
+      parsed.childPrompt = config.childPrompt.trim();
+    }
     return parsed;
   } catch {
     return {};
   }
+}
+
+/**
+ * Resolve the child system prompt source passed to Pi's resource loader / CLI.
+ *
+ * Returns `undefined` when the child should inherit the parent prompt, an empty
+ * string to force Pi's stock prompt (Pi skips SYSTEM.md discovery when the source
+ * is falsy), or a path / literal text otherwise.
+ */
+export function resolveChildSystemPrompt(
+  config: ForkConfig,
+  cwd: string,
+): string | undefined {
+  const value = config.childPrompt ?? "stock";
+  if (value === "inherit") return undefined;
+  // Empty string is deliberate: Pi's resolvePromptInput() treats it as "no custom
+  // prompt" and skips discoverSystemPromptFile(), restoring the built-in prompt
+  // (preamble + tools + rules + docs) instead of inheriting SYSTEM.md.
+  if (value === "stock") return "";
+  if (value.startsWith("~/")) return path.join(os.homedir(), value.slice(2));
+  if (path.isAbsolute(value)) return value;
+  // A relative value is treated as a path only when it looks like one; anything
+  // else is literal prompt text (Pi accepts both forms in the same option).
+  if (/[\\/]/.test(value) || /\.(md|txt)$/i.test(value)) return path.resolve(cwd, value);
+  return value;
 }
 
 export function loadConfig(cwd: string): ForkConfig {

@@ -176,6 +176,7 @@ export function buildPiArgs(
   effortProfile?: ForkEffortProfile,
   inherited = inheritedCliArgs,
   activeTools?: string[],
+  childSystemPrompt?: string,
 ): string[] {
   const args: string[] = [
     "--mode",
@@ -222,6 +223,10 @@ export function buildPiArgs(
     }
   }
 
+  if (childSystemPrompt !== undefined) {
+    args.push("--system-prompt", childSystemPrompt);
+  }
+
   args.push(buildForkTaskPrompt(task));
   return args;
 }
@@ -234,6 +239,8 @@ export interface RunSubprocessOptions {
   tools?: string[] | null;
   deniedTools?: string[];
   allowRecursiveFork?: boolean;
+  /** undefined = inherit parent prompt; "" = Pi stock prompt; else path/text. */
+  childSystemPrompt?: string;
   environment?: Record<string, string>;
   offline?: boolean;
   signal?: AbortSignal;
@@ -253,6 +260,7 @@ export async function runSubprocess(opts: RunSubprocessOptions): Promise<ForkRes
     tools,
     deniedTools,
     allowRecursiveFork = false,
+    childSystemPrompt,
     environment = {},
     offline = true,
     signal,
@@ -329,7 +337,15 @@ export async function runSubprocess(opts: RunSubprocessOptions): Promise<ForkRes
       activeTools = activeTools.filter((name) => !denied.has(name));
     }
 
-    const piArgs = buildPiArgs(task, forkSessionTmpPath, extensions, effort?.profile, inheritedCliArgs, activeTools);
+    const piArgs = buildPiArgs(
+      task,
+      forkSessionTmpPath,
+      extensions,
+      effort?.profile,
+      inheritedCliArgs,
+      activeTools,
+      childSystemPrompt,
+    );
     let wasAborted = false;
 
     const exitCode = await new Promise<number>((resolve) => {

@@ -83,6 +83,7 @@ test("loadConfig reads pi-fork.extensions and resolves local paths relative to s
       offline: true,
       environment: {},
       runtime: "auto",
+      childPrompt: "stock",
     });
   } finally {
     if (previous === undefined) delete process.env.PI_FORK_TEST_AGENT_DIR;
@@ -129,6 +130,7 @@ test("loadConfig treats null extensions as normal Pi extension loading", async (
       offline: true,
       environment: {},
       runtime: "auto",
+      childPrompt: "stock",
     });
   } finally {
     if (previous === undefined) delete process.env.PI_FORK_TEST_AGENT_DIR;
@@ -165,6 +167,7 @@ test("loadConfig preserves empty extensions array as no child extensions", async
       offline: true,
       environment: {},
       runtime: "auto",
+      childPrompt: "stock",
     });
   } finally {
     if (previous === undefined) delete process.env.PI_FORK_TEST_AGENT_DIR;
@@ -203,6 +206,7 @@ test("loadConfig allows disabling cost footer", async () => {
       offline: true,
       environment: {},
       runtime: "auto",
+      childPrompt: "stock",
     });
   } finally {
     if (previous === undefined) delete process.env.PI_FORK_TEST_AGENT_DIR;
@@ -331,6 +335,7 @@ test("loadConfig merges pi-fork.environment with project overriding global", asy
         PROJECT_ONLY: "yes",
       },
       runtime: "auto",
+      childPrompt: "stock",
     });
   } finally {
     if (previous === undefined) delete process.env.PI_FORK_TEST_AGENT_DIR;
@@ -475,7 +480,7 @@ test("loadConfig parses defaultEffort and complete effortProfiles", async () => 
       offline: true,
       environment: {},
       runtime: "auto",
-      runtime: "auto",
+      childPrompt: "stock",
       defaultEffort: "balanced",
       effortProfiles: {
         fast: { provider: "openai-codex", id: "gpt-fast", thinking: "minimal" },
@@ -602,12 +607,74 @@ test("loadConfig keeps no-profile config backward compatible", async () => {
       offline: true,
       environment: {},
       runtime: "auto",
-      runtime: "auto",
+      childPrompt: "stock",
     });
   } finally {
     if (previous === undefined) delete process.env.PI_FORK_TEST_AGENT_DIR;
     else process.env.PI_FORK_TEST_AGENT_DIR = previous;
     cleanup();
     fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test("loadConfig reads childPrompt override", async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-fork-config-childprompt-"));
+  const agentDir = path.join(tmpDir, "agent");
+  const projectDir = path.join(tmpDir, "project");
+  const projectSettingsDir = path.join(projectDir, ".pi");
+  const { moduleUrl, cleanup } = createTestableConfigModule();
+
+  fs.mkdirSync(agentDir, { recursive: true });
+  fs.mkdirSync(projectSettingsDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(projectSettingsDir, "settings.json"),
+    JSON.stringify({ "pi-fork": { childPrompt: "inherit" } }),
+  );
+
+  const previous = process.env.PI_FORK_TEST_AGENT_DIR;
+  process.env.PI_FORK_TEST_AGENT_DIR = agentDir;
+
+  try {
+    const { loadConfig } = await import(`${moduleUrl}?t=${Date.now()}`);
+    assert.equal(loadConfig(projectDir).childPrompt, "inherit");
+  } finally {
+    if (previous === undefined) delete process.env.PI_FORK_TEST_AGENT_DIR;
+    else process.env.PI_FORK_TEST_AGENT_DIR = previous;
+    cleanup();
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test("resolveChildSystemPrompt maps stock/inherit/path/text to Pi prompt sources", async () => {
+  const { moduleUrl, cleanup } = createTestableConfigModule();
+  const previous = process.env.PI_FORK_TEST_AGENT_DIR;
+  const cwd = path.join(os.tmpdir(), "pi-fork-cwd-fixture");
+
+  try {
+    const { resolveChildSystemPrompt } = await import(`${moduleUrl}?t=${Date.now()}`);
+
+    // "" is the deliberate stock-prompt signal: Pi skips SYSTEM.md discovery.
+    assert.equal(resolveChildSystemPrompt({ childPrompt: "stock" }, cwd), "");
+    assert.equal(resolveChildSystemPrompt({}, cwd), "");
+
+    // undefined means "do not override the inherited prompt".
+    assert.equal(resolveChildSystemPrompt({ childPrompt: "inherit" }, cwd), undefined);
+
+    assert.equal(
+      resolveChildSystemPrompt({ childPrompt: "~/agent/SYSTEM.md" }, cwd),
+      path.join(os.homedir(), "agent", "SYSTEM.md"),
+    );
+    assert.equal(
+      resolveChildSystemPrompt({ childPrompt: "prompts/worker.md" }, cwd),
+      path.resolve(cwd, "prompts/worker.md"),
+    );
+
+    // Literal prompt text must survive verbatim, not be resolved into a path.
+    const literal = "You are a worker. Execute only the assigned task.";
+    assert.equal(resolveChildSystemPrompt({ childPrompt: literal }, cwd), literal);
+  } finally {
+    if (previous === undefined) delete process.env.PI_FORK_TEST_AGENT_DIR;
+    else process.env.PI_FORK_TEST_AGENT_DIR = previous;
+    cleanup();
   }
 });

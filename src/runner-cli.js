@@ -76,6 +76,7 @@ export function parseInheritedCliArgs(argv) {
         "--mode",
         "--session",
         "--fork",
+        "--system-prompt",
         "--append-system-prompt",
         "--export",
       ].includes(flagName)
@@ -146,7 +147,6 @@ export function parseInheritedCliArgs(argv) {
       [
         "--provider",
         "--api-key",
-        "--system-prompt",
         "--models",
       ].includes(flagName)
     ) {

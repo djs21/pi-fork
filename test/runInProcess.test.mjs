@@ -4,7 +4,7 @@ import * as pi from "@earendil-works/pi-coding-agent";
 import path from "node:path";
 import os from "node:os";
 
-test("in-process session inherits all tools and extensions while denying fork by default", async () => {
+test("in-process session inherits all tools and extensions while denying fork by default", { timeout: 30_000 }, async () => {
   const cwd = process.cwd();
   const agentDir = path.join(os.homedir(), ".pi", "agent");
 

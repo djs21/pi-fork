@@ -304,6 +304,31 @@ Set the runtime mode in `~/.pi/agent/settings.json` or `.pi/settings.json`:
 **Note**: The `environment` and `offline` settings only work with the subprocess runtime.
 If you need custom environment variables, set `runtime: "subprocess"`.
 
+## Child System Prompt
+
+Forks do not inherit the parent's system prompt by default. `pi-fork` tells Pi to
+use its stock coding-assistant prompt instead (empty `systemPrompt` / `--system-prompt ""`),
+which skips `SYSTEM.md` discovery in the child. A fork then sees Pi's full built-in
+prompt - preamble, tool guidelines, rules, docs, cwd - rather than the parent's
+authoring prompt, so it stops believing it is the orchestrator that should not
+delegate.
+
+This also restores Pi's built-in `rules` and `docs` sections (including extension
+tool guidelines) that a parent `SYSTEM.md` normally replaces.
+
+```json
+{
+  "pi-fork": {
+    "childPrompt": "stock"
+  }
+}
+```
+
+- `"stock"` (default): Pi's built-in prompt. Parent `SYSTEM.md` is ignored.
+- `"inherit"`: keep the parent prompt. Useful with `allowRecursiveFork: true`.
+- a path such as `"./prompts/worker.md"` or `"~/agent/worker.md"`, or any
+  non-path string: used verbatim as the child system prompt.
+
 ## Manual Check
 
 From this directory:

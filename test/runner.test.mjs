@@ -746,3 +746,32 @@ test("buildPiArgs forwards --no-tools when activeTools is empty", () => {
   assert.equal(args.includes("--no-tools"), true);
   assert.equal(args.includes("--tools"), false);
 });
+
+test("buildPiArgs forwards child system prompt as --system-prompt before task prompt", () => {
+  const task = "Check prompt isolation.";
+  const args = buildPiArgs(
+    task,
+    "/tmp/fork.jsonl",
+    null,
+    undefined,
+    { alwaysProxy: [], extensionArgs: [] },
+    undefined,
+    "",
+  );
+
+  assert.deepEqual(args.slice(-3), ["--system-prompt", "", buildForkTaskPrompt(task)]);
+});
+
+test("buildPiArgs omits --system-prompt when child prompt is inherited", () => {
+  const args = buildPiArgs(
+    "Check prompt inheritance.",
+    "/tmp/fork.jsonl",
+    null,
+    undefined,
+    { alwaysProxy: [], extensionArgs: [] },
+    undefined,
+    undefined,
+  );
+
+  assert.equal(args.includes("--system-prompt"), false);
+});

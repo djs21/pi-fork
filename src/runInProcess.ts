@@ -38,6 +38,11 @@ export interface RunInProcessOptions {
   tools?: string[] | null;
   deniedTools?: string[];
   allowRecursiveFork?: boolean;
+  /**
+   * Child system prompt source. `undefined` inherits the parent prompt, `""` forces
+   * Pi's stock prompt (skips SYSTEM.md discovery), otherwise path or literal text.
+   */
+  childSystemPrompt?: string;
   signal?: AbortSignal;
   onUpdate?: OnUpdateCallback;
   makeDetails: (results: ForkResult[]) => ForkDetails;
@@ -66,6 +71,7 @@ export async function runInProcess(opts: RunInProcessOptions): Promise<ForkResul
     tools,
     deniedTools,
     allowRecursiveFork = false,
+    childSystemPrompt,
     signal,
     onUpdate,
     makeDetails,
@@ -109,6 +115,8 @@ export async function runInProcess(opts: RunInProcessOptions): Promise<ForkResul
     const resourceLoader = new DefaultResourceLoader({
       cwd,
       agentDir: resolvedAgentDir,
+      // undefined = inherit parent prompt; "" = Pi stock prompt; else path/text.
+      ...(childSystemPrompt !== undefined ? { systemPrompt: childSystemPrompt } : {}),
       additionalExtensionPaths: Array.isArray(extensions) && extensions.length > 0 ? extensions : undefined,
       noExtensions: Array.isArray(extensions),
     });

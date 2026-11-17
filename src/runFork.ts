@@ -8,6 +8,7 @@
 import type { AgentToolResult } from "@earendil-works/pi-agent-core";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import type { ForkConfig, ForkRuntime } from "./config.ts";
+import { resolveChildSystemPrompt } from "./config.ts";
 import { runInProcess, type RunInProcessOptions } from "./runInProcess.ts";
 import { runSubprocess, type RunSubprocessOptions, type ContextWindowResolver } from "./runSubprocess.ts";
 import {
@@ -64,6 +65,7 @@ export async function runFork(opts: RunForkOptions): Promise<ForkResult> {
   } = opts;
 
   const useSubprocess = shouldUseSubprocess(config);
+  const childSystemPrompt = resolveChildSystemPrompt(config, cwd);
 
   if (useSubprocess) {
     // Subprocess path: needs environment isolation
@@ -82,6 +84,7 @@ export async function runFork(opts: RunForkOptions): Promise<ForkResult> {
       tools: config.tools,
       deniedTools: config.deniedTools,
       allowRecursiveFork: config.allowRecursiveFork,
+      childSystemPrompt,
       parentActiveTools,
     });
   }
@@ -96,6 +99,7 @@ export async function runFork(opts: RunForkOptions): Promise<ForkResult> {
     tools: config.tools,
     deniedTools: config.deniedTools,
     allowRecursiveFork: config.allowRecursiveFork,
+    childSystemPrompt,
     signal,
     onUpdate,
     makeDetails,

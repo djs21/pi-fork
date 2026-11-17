@@ -26,6 +26,8 @@ test("forwards safe parent CLI flags and captures fallback settings", () => {
     "/tmp/current.jsonl",
     "--fork",
     "/tmp/source.jsonl",
+    "--system-prompt",
+    "/tmp/parent-system.md",
     "--append-system-prompt",
     "/tmp/prompt.md",
     "--custom-flag",
