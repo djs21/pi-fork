@@ -21,12 +21,15 @@ through the CLI — never edit the SQLite database directly.
 ## Build & Test
 
 ```bash
-bun test                    # Full suite
+bun test                    # Full suite (fast)
+node --test 'test/**/*.mjs' # Same suite under Node
 pi -e .                     # Manual check: load the extension in Pi
 ```
 
-`node --test` currently hangs on `test/runInProcess.test.mjs`, which loads the
-real `~/.pi/agent` extensions. Use `bun test`.
+`test/runInProcess.test.mjs` is hermetic: it builds a real Pi session in an empty
+temp workspace (`~/.pi/agent` and repo `.pi` are never touched) and loads one
+fixture extension via `additionalExtensionPaths`. It passes under both runners in
+~3s. Both runners should be used for validation.
 
 ## Architecture Overview
 

@@ -45,9 +45,13 @@ cp -rf source dest          # NOT: cp -r source dest
 ## Build & Test
 
 ```bash
-bun test                    # Full suite (fast; node --test hangs on a legacy test)
+bun test                    # Full suite (fast)
+node --test 'test/**/*.mjs' # Same suite under Node
 pi -e .                     # Manual check: load the extension in Pi
 ```
+
+`test/runInProcess.test.mjs` is hermetic (empty temp workspace + one fixture
+extension via `additionalExtensionPaths`), so it passes under both runners.
 
 ## Commit Policy
 

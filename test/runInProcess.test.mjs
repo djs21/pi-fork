@@ -3,16 +3,27 @@ import assert from "node:assert/strict";
 import * as pi from "@earendil-works/pi-coding-agent";
 import path from "node:path";
 import os from "node:os";
+import fs from "node:fs";
+import { fileURLToPath } from "node:url";
 
-test("in-process session inherits all tools and extensions while denying fork by default", { timeout: 30_000 }, async () => {
-  const cwd = process.cwd();
-  const agentDir = path.join(os.homedir(), ".pi", "agent");
+const testDir = path.dirname(fileURLToPath(import.meta.url));
+const FIXTURE_EXTENSION = path.join(testDir, "fixtures", "fork-fixture-extension.mjs");
+
+/**
+ * Build a real Pi session in an empty temp workspace: no personal
+ * `~/.pi/agent` extensions, no repo `.pi` directory, no AGENTS.md/SYSTEM.md.
+ * Everything Pi loads comes from `additionalExtensionPaths`.
+ */
+async function createSession(options = {}) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-fork-test-"));
+  const cwd = dir;
+  const agentDir = dir;
 
   const resourceLoader = new pi.DefaultResourceLoader({
     cwd,
     agentDir,
-    additionalExtensionPaths: undefined,
-    noExtensions: false,
+    additionalExtensionPaths: options.additionalExtensionPaths,
+    noExtensions: options.noExtensions ?? false,
   });
   await resourceLoader.reload();
 
@@ -26,15 +37,23 @@ test("in-process session inherits all tools and extensions while denying fork by
   });
 
   await session.extensionRunner.emit({ type: "session_start" });
+  return { session, dir };
+}
+
+test("in-process session loads extensions from additionalExtensionPaths and denies fork by default", async (t) => {
+  globalThis.piForkTestFixtureLoaded = false;
+  const { session, dir } = await createSession({ additionalExtensionPaths: [FIXTURE_EXTENSION] });
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+
+  // The fixture file went through the real loader and runner pipeline.
+  assert.equal(
+    globalThis.piForkTestFixtureLoaded,
+    true,
+    "fixture extension must be discovered, loaded, and its session_start handler must run"
+  );
 
   // Default fork policy: inherit all tools, deny fork
-  let activeTools = session.getActiveToolNames();
-  const denied = new Set();
-  const allowRecursiveFork = false;
-  if (!allowRecursiveFork) {
-    denied.add("fork");
-  }
-  activeTools = activeTools.filter((name) => !denied.has(name));
+  const activeTools = session.getActiveToolNames().filter((name) => name !== "fork");
   session.setActiveToolsByName(activeTools);
 
   const finalTools = session.getActiveToolNames();
@@ -43,66 +62,25 @@ test("in-process session inherits all tools and extensions while denying fork by
   assert.equal(finalTools.includes("bash"), true, "bash must remain active");
 });
 
-test("in-process session honors explicit tools and deniedTools", async () => {
-  const cwd = process.cwd();
-  const agentDir = path.join(os.homedir(), ".pi", "agent");
-
-  const resourceLoader = new pi.DefaultResourceLoader({
-    cwd,
-    agentDir,
-    noExtensions: true,
-  });
-  await resourceLoader.reload();
-
-  const { session } = await pi.createAgentSession({
-    cwd,
-    agentDir,
-    resourceLoader,
-    sessionManager: pi.SessionManager.inMemory(),
-    settingsManager: pi.SettingsManager.inMemory(),
-    modelRegistry: new pi.ModelRegistry(),
-  });
-
-  await session.extensionRunner.emit({ type: "session_start" });
+test("in-process session honors explicit tools and deniedTools", async (t) => {
+  const { session, dir } = await createSession({ noExtensions: true });
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
 
   // Explicit tools = ["read", "bash"], deniedTools = ["bash"]
   const tools = ["read", "bash"];
   const deniedTools = ["bash"];
-  let activeTools = [...tools];
-  const denied = new Set(deniedTools);
-  denied.add("fork");
-  activeTools = activeTools.filter((name) => !denied.has(name));
+  const activeTools = tools.filter((name) => !deniedTools.includes(name) && name !== "fork");
   session.setActiveToolsByName(activeTools);
 
   assert.deepEqual(session.getActiveToolNames(), ["read"]);
 });
 
-test("in-process session inherits parentActiveTools while stripping fork", async () => {
-  const cwd = process.cwd();
-  const agentDir = path.join(os.homedir(), ".pi", "agent");
-
-  const resourceLoader = new pi.DefaultResourceLoader({
-    cwd,
-    agentDir,
-  });
-  await resourceLoader.reload();
-
-  const { session } = await pi.createAgentSession({
-    cwd,
-    agentDir,
-    resourceLoader,
-    sessionManager: pi.SessionManager.inMemory(),
-    settingsManager: pi.SettingsManager.inMemory(),
-    modelRegistry: new pi.ModelRegistry(),
-  });
-
-  await session.extensionRunner.emit({ type: "session_start" });
+test("in-process session inherits parentActiveTools while stripping fork", async (t) => {
+  const { session, dir } = await createSession({ noExtensions: true });
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
 
   const parentActiveTools = ["read", "bash", "fork"];
-  const denied = new Set();
-  denied.add("fork");
-
-  let activeTools = parentActiveTools.filter((t) => !denied.has(t));
+  const activeTools = parentActiveTools.filter((name) => name !== "fork");
   session.setActiveToolsByName(activeTools);
 
   const finalTools = session.getActiveToolNames();
