@@ -9,12 +9,10 @@ pi-subagents
 pi-subagent-tintin
 .pi
 
-# Beads / Dolt files (added by bd init)
-.dolt/
+# sbeads (local issue database is never committed)
+.sbeads/
 *.db
-.beads-credential-key
-.beads/proxieddb/
-.beads/interactions.jsonl
-
-# Beads / Dolt files (added by bd init)
 *.gate.lock*
+
+# leftover bd/dolt data (bd is uninstalled; safe to delete locally)
+.beads/
